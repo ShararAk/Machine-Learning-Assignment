@@ -1,0 +1,96 @@
+---
+title: "ML"
+author: "Sharareh Akbarian"
+date: "11/03/2021"
+output: html_document
+
+Approach:
+Classe, a component variable, is our outcome variable. “Participants were required to execute one series of ten repetitions of the Unilateral Dumbbell Biceps Curl in five separate fashions” for this data set.
+- exactly according to the specification (Class A) 
+- throwing the elbows to the front (Class B) 
+- lifting the dumbbell only halfway (Class C) 
+- lowering the dumbbell only halfway (Class D) 
+- throwing the hips to the front (Class E)
+
+Decision Tree and Random Forest will be used to compare two versions. Our final model will be the model with the best accuracy.
+
+Our outcome variable “classe” is a factor variable. We split the Training dataset into TrainSet and TestSet datasets.
+
+Cross-validation will be performed by subsampling our training data set randomly without replacement into 2 subsamples: 
+TrainingSet data (75% of the original Training data set) and TestSet data (25%). 
+Our models will be fitted on the TrainSet data, and tested on the TestSet data. 
+The most accurate model would be tested on the original Testing data.
+
+Let's load packages and data
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+
+#Loading Data
+trainingset <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testingset <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+
+Let's remove the columns with missing values and the irrelevant variables
+
+```{r}
+trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
+testingset <-testingset[,colSums(is.na(testingset)) == 0]
+```
+
+# partition the data so that 75% of the training dataset into training and the remaining 25% to testing
+
+```{r}
+traintrainset <- createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
+TrainSet <- trainingset[traintrainset, ] 
+TestSet <- trainingset[-traintrainset, ]
+```
+
+A plot of the "claase" variable to check the frequency of its levels in the TrainTrainingSet data set 
+We can see from the graph that each level frequency is within one order of magnitude of the others. The most common level is A, while the least common is D.
+
+```{r}
+
+ggplot(data.frame(TrainSet$classe), aes(x=TrainSet$classe)) +
+  geom_bar()+
+  geom_bar(fill="lightgreen")+
+  geom_bar(fill="lightblue",aes(y=..count../sum(..count..)))+
+  labs(x = "classe", y = "Frequency")
+```
+
+First Prediction Model: Decision Tree
+
+```{r}
+modelDT <- rpart(classe ~ ., data=TrainSet, method="class")
+
+predictionDT <- predict(modelDT, TestSet, type = "class")
+
+confusionMatrix(predictionDT, as.factor(TestSet$classe))
+
+```
+
+Second Prediction Model: Random Forest
+
+```{r}
+
+TrainSet$classe = factor (TrainSet$classe)
+modelRF <- randomForest(classe ~. , data=TrainSet, method="class")
+
+predictionRF <- predict(modelRF, TestSet, type = "class")
+
+confusionMatrix(predictionRF, as.factor(TestSet$classe))
+
+```
+Conclusion:
+  
+I used the Random Forest Model as the final prediction model after comparing the performance of the Random Forest and Decision Tree models. So the below is the final results.
+
+```{r}
+FinalModel <- predict(modelRF, testingset, type="class")
+FinalModel
+```
